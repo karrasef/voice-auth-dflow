@@ -16,6 +16,8 @@ import uuid
 model = whisper.load_model("small.en")  
 
 engine =pyttsx3.init()
+voices = engine.getProperty('voices')
+engine.setProperty('voice', voices[1].id)
 
 load_dotenv()
 
@@ -28,7 +30,7 @@ SILENCE_LIMIT = int(os.getenv("SILENCE_LIMIT"))
 
 SAMPLERATE = int(os.getenv("SAMPLERATE"))
 DURATION = int(os.getenv("DURATION"))
-PHRASES = [os.getenv("PHRASES")]
+PHRASES = ["Ok Kira, set a timer for 5 minutes", "Ok Kira, explain how a rainbow is formed", "Hey Kira, what's the weather tomorrow?", "Hey Kira, help me write a thank you note"]
 PROFILE_DIR = "voice_profiles" 
 DEFAULT_THRESHOLD = float(os.getenv("DEFAULT_THRESHOLD"))
 WAKE_WORD_REGEX = os.getenv("WAKE_WORD_REGEX")
@@ -72,8 +74,6 @@ def record_audio(filename, samplerate):
     wf.setframerate(samplerate)
     wf.writeframes(b"".join(frames))
     wf.close()
-
-    print(f"Recording saved to {filename}")
 
 def transcribe_audio_whisper(audio_data, samplerate):
     try:
@@ -205,7 +205,6 @@ def send_to_dflow(transcribed_text, user_id):
     try:
         response = requests.post(rasa_endpoint, json=payload)
         if response.status_code == 200:
-            print("Response from dFlow:")
             for reply in response.json():
                 bot_response = reply.get('text', '')
                 if bot_response:
@@ -219,7 +218,6 @@ def send_to_dflow(transcribed_text, user_id):
 def authenticate_user(encoder, profiles, user_data, threshold):
     """Authenticates a user by comparing a recorded phrase with all saved voice profiles."""
     
-    print("\nPlease say a phrase to authenticate:")
     record_audio('auth_attempt.wav', SAMPLERATE)
     auth_wav = process_audio('auth_attempt.wav')
     
@@ -269,6 +267,7 @@ def authenticate_user(encoder, profiles, user_data, threshold):
             print("No profiles available. Please enroll users first.")
     else:
         print("Authentication failed: No matching profile found.")
+        speak("Sorry, I couldn't verify your identity! Please try again.")
         listen_for_wake_word()  
             
         profiles, user_data = load_voice_profiles()
@@ -319,8 +318,6 @@ def main():
             else:
                 print("No profiles available. Please enroll users first.")
         elif choice == '3':
-            listen_for_wake_word()  
-            
             profiles = list_voice_profiles()
             if profiles:
                 print("\nAvailable profiles:")
